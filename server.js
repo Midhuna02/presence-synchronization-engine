@@ -8,17 +8,18 @@ const io = new Server(server);
 
 app.use(express.static("public"));
 
-const users = {}; // userId -> { sockets:Set, status }
+const users = {};
 const GROUP_ROOM = "GLOBAL_GROUP";
 
 function broadcastUserList() {
   const list = {};
-  for (const u in users) list[u] = users[u].status;
+  for (const u in users) {
+    list[u] = users[u].status;
+  }
   io.emit("user-list", list);
 }
 
 io.on("connection", (socket) => {
-
   socket.on("join", (userId) => {
     socket.userId = userId;
 
@@ -33,17 +34,17 @@ io.on("connection", (socket) => {
     broadcastUserList();
   });
 
-  /* ---------- GROUP MESSAGE ---------- */
+  // GROUP MESSAGE
   socket.on("group-message", (message) => {
     socket.to(GROUP_ROOM).emit("group-message", message);
   });
 
-  /* ---------- GROUP TYPING ---------- */
+  // GROUP TYPING
   socket.on("group-typing", () => {
     socket.to(GROUP_ROOM).emit("group-typing", socket.userId);
   });
 
-  /* ---------- PRIVATE MESSAGE ---------- */
+  // PRIVATE MESSAGE
   socket.on("private-message", ({ to, message }) => {
     if (!users[to]) return;
 
@@ -54,7 +55,7 @@ io.on("connection", (socket) => {
     socket.emit("delivered", message.msgId);
   });
 
-  /* ---------- PRIVATE TYPING ---------- */
+  // PRIVATE TYPING
   socket.on("private-typing", ({ to }) => {
     if (!users[to]) return;
 
@@ -63,7 +64,7 @@ io.on("connection", (socket) => {
     });
   });
 
-  /* ---------- SEEN ---------- */
+  // SEEN
   socket.on("seen", ({ to, msgId }) => {
     if (!users[to]) return;
 
@@ -86,5 +87,6 @@ io.on("connection", (socket) => {
 });
 
 const PORT = process.env.PORT || 3000;
-server.listen(PORT);
+server.listen(PORT, () => {
+  console.log("Server running on port", PORT);
 });
