@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Mi Chat</title>
+  <script src="/socket.io/socket.io.js"></script>
+
+  <style>
+    body { margin:0; font-family:Arial; height:100vh; display:flex; background:#e5ddd5 }
+    .users { width:260px; background:#fff; border-right:1px solid #ddd; padding:10px }
+    .user,.group { padding:8px; border-bottom:1px solid #eee; cursor:pointer }
+    .group { font-weight:bold; background:#f0f0f0 }
+    .online{color:green} .offline{color:gray}
+    .chat{flex:1; display:flex; flex-direction:column}
+    .header{padding:12px; background:#075e54; color:#fff}
+    .typing{font-size:12px; padding:4px 12px; height:16px}
+    .messages{flex:1; padding:12px; overflow-y:auto; background:#efeae2}
+    .msg{max-width:70%; margin-bottom:8px; padding:8px 10px; border-radius:8px}
+    .me{background:#dcf8c6; margin-left:auto}
+    .them{background:#fff}
+    .meta{font-size:11px; opacity:.6; text-align:right}
+    .input{display:flex; padding:10px; background:#f0f0f0}
+    input{flex:1; padding:8px; border-radius:20px; border:1px solid #ccc}
+    button{margin-left:8px; padding:8px 14px; background:#075e54; color:#fff; border:none; border-radius:20px}
+  </style>
+</head>
+
+<body>
+
+<div class="users">
+  <div class="group" onclick="selectGroup()">🌐 Group Chat</div>
+  <hr>
+  <div id="userList"></div>
+</div>
+
+<div class="chat">
+  <div class="header" id="chatHeader">Group Chat</div>
+  <div class="typing" id="typing"></div>
+  <div class="messages" id="messages"></div>
+
+  <div class="input">
+    <input id="msg" placeholder="Type a message..." />
+    <button onclick="send()">Send</button>
+  </div>
+</div>
+
+<script>
+const socket = io();
+const me = prompt("Your name");
+let mode = "group";
+let selectedUser = null;
+const messages = { group: [] };
+const msgInput = document.getElementById("msg");
+const typingDiv = document.getElementById("typing");
+let typingTimer;
+
+socket.emit("join", me);
+
+/* ---------- USER LIST ---------- */
+socket.on("user-list", (users) => {
+  const ul = document.getElementById("userList");
+  ul.innerHTML = "";
+  for (const u in users) {
+    if (u === me) continue;
+    const div = document.createElement("div");
+    div.className = `user ${users[u]}`;
+    div.innerText = `${u} (${users[u]})`;
+    div.onclick = () => selectUser(u);
+    ul.appendChild(div);
+  }
+});
+
+/* ---------- CHAT SELECT ---------- */
+function selectGroup() {
+  mode = "group";
+  selectedUser = null;
+  chatHeader.innerText = "Group Chat";
+  messagesDiv().innerHTML = "";
+  typingDiv.innerText = "";
+  messages.group.forEach(renderMessage);
+}
+
+function selectUser(user) {
+  mode = "private";
+  selectedUser = user;
+  chatHeader.innerText = user;
+  messagesDiv().innerHTML = "";
+  typingDiv.innerText = "";
+
+  messages[user] = messages[user] || [];
+  messages[user].forEach(renderMessage);
+
+  messages[user].forEach(m => {
+    if (m.from !== me && m.status !== "seen") {
+      socket.emit("seen", { to: user, msgId: m.msgId });
+      m.status = "seen";
+    }
+  });
+}
+
+/* ---------- SEND ---------- */
+function send() {
+  const text = msgInput.value.trim();
+  if (!text) return;
+
+  const message = {
+    from: me,
+    text,
+    time: new Date().toLocaleTimeString(),
+    msgId: Date.now() + me,
+    status: "sent"
+  };
+
+  if (mode === "group") {
+    messages.group.push(message);
+    renderMessage(message);
+    socket.emit("group-message", message);
+  } else {
+    messages[selectedUser].push(message);
+    renderMessage(message);
+    socket.emit("private-message", { to: selectedUser, message });
+  }
+
+  msgInput.value = "";
+}
+
+/* ---------- RECEIVE ---------- */
+socket.on("group-message", (message) => {
+  messages.group.push(message);
+  if (mode === "group") renderMessage(message);
+});
+
+socket.on("private-message", (message) => {
+  message.status = "delivered";
+  messages[message.from] = messages[message.from] || [];
+  messages[message.from].push(message);
+
+  if (mode === "private" && selectedUser === message.from) {
+    renderMessage(message);
+    socket.emit("seen", { to: message.from, msgId: message.msgId });
+    message.status = "seen";
+  }
+});
+
+socket.on("seen", (msgId) => {
+  for (const u in messages) {
+    messages[u]?.forEach(m => {
+      if (m.msgId === msgId) m.status = "seen";
+    });
+  }
+  refreshChat();
+});
+
+/* ---------- TYPING ---------- */
+msgInput.addEventListener("input", () => {
+  if (mode === "group") socket.emit("group-typing");
+  if (mode === "private") socket.emit("private-typing", { to: selectedUser });
+});
+
+socket.on("group-typing", showTyping);
+socket.on("private-typing", showTyping);
+
+function showTyping(user) {
+  typingDiv.innerText = `${user} is typing...`;
+  clearTimeout(typingTimer);
+  typingTimer = setTimeout(() => typingDiv.innerText = "", 1200);
+}
+
+/* ---------- HELPERS ---------- */
+function renderMessage(m) {
+  const div = document.createElement("div");
+  div.className = `msg ${m.from === me ? "me" : "them"}`;
+  div.innerHTML = `
+    ${m.text}
+    <div class="meta">
+      ${m.time}
+      ${m.from === me && mode === "private" ? " • " + m.status : ""}
+    </div>
+  `;
+  messagesDiv().appendChild(div);
+  messagesDiv().scrollTop = messagesDiv().scrollHeight;
+}
+
+function refreshChat() {
+  if (mode !== "private") return;
+  messagesDiv().innerHTML = "";
+  messages[selectedUser].forEach(renderMessage);
+}
+
+function messagesDiv() {
+  return document.getElementById("messages");
+}
+
+msgInput.addEventListener("keydown", e => e.key === "Enter" && send());
+</script>
+
+</body>
+</html>
