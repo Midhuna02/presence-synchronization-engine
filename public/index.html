@@ -195,3 +195,75 @@ msgInput.addEventListener("keydown", e => e.key === "Enter" && send());
 
 </body>
 </html>
+
+/* =========================
+   MOBILE VIEW (phones)
+   ========================= */
+@media (max-width: 768px) {
+
+  body {
+    flex-direction: column;
+  }
+
+  /* User list becomes horizontal top bar */
+  .users {
+    width: 100%;
+    height: auto;
+    display: flex;
+    flex-direction: row;
+    overflow-x: auto;
+    border-right: none;
+    border-bottom: 1px solid #ddd;
+  }
+
+  .group,
+  .user {
+    flex: 0 0 auto;
+    padding: 10px;
+    font-size: 13px;
+    white-space: nowrap;
+  }
+
+  hr {
+    display: none;
+  }
+
+  /* Chat area full screen */
+  .chat {
+    flex: 1;
+    height: 100%;
+  }
+
+  .header {
+    font-size: 16px;
+    text-align: center;
+  }
+
+  .messages {
+    padding: 8px;
+  }
+
+  .msg {
+    max-width: 85%;
+    font-size: 13px;
+  }
+
+  /* Input area */
+  .input {
+    padding: 8px;
+  }
+
+  .input input {
+    font-size: 14px;
+    padding: 10px;
+  }
+
+  .input button {
+    padding: 10px 16px;
+    font-size: 14px;
+  }
+
+  .typing {
+    font-size: 11px;
+  }
+}
