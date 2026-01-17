@@ -309,6 +309,15 @@ function renderMessage(m) {
 function messagesDiv() {
   return document.getElementById("messages");
 }
+
+// SEND MESSAGE ON ENTER (DESKTOP + MOBILE)
+msgInput.addEventListener("keydown", function (e) {
+  if (e.key === "Enter") {
+    e.preventDefault();
+    send();
+  }
+});
+
 </script>
 
 </body>
