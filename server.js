@@ -5,17 +5,13 @@ const { Server } = require("socket.io");
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server, {
-  cors: {
-    origin: "*",
-    methods: ["GET", "POST"]
-  }
+  cors: { origin: "*", methods: ["GET","POST"] }
 });
-
 
 app.use(express.static("public"));
 
-const users = {};
-const GROUP_ROOM = "GLOBAL_GROUP";
+const users = {}; // username -> { sockets:Set, status }
+const GROUP = "GLOBAL";
 
 function broadcastUsers(){
   const list = {};
@@ -27,23 +23,26 @@ function broadcastUsers(){
 
 io.on("connection", socket => {
 
-  socket.on("join", userId => {
-    socket.userId = userId;
-    if(!users[userId]){
-      users[userId] = { sockets:new Set(), status:"online" };
+  socket.on("join", username => {
+    socket.username = username;
+
+    if(!users[username]){
+      users[username] = { sockets:new Set(), status:"online" };
     }
-    users[userId].sockets.add(socket.id);
-    users[userId].status="online";
-    socket.join(GROUP_ROOM);
+
+    users[username].sockets.add(socket.id);
+    users[username].status = "online";
+
+    socket.join(GROUP);
     broadcastUsers();
   });
 
   socket.on("group-message", msg=>{
-    socket.to(GROUP_ROOM).emit("group-message", msg);
+    socket.to(GROUP).emit("group-message", msg);
   });
 
   socket.on("group-typing", ()=>{
-    socket.to(GROUP_ROOM).emit("group-typing", socket.userId);
+    socket.to(GROUP).emit("group-typing", socket.username);
   });
 
   socket.on("private-message", ({to,message})=>{
@@ -56,7 +55,7 @@ io.on("connection", socket => {
   socket.on("private-typing", ({to})=>{
     if(!users[to]) return;
     users[to].sockets.forEach(id=>{
-      io.to(id).emit("private-typing", socket.userId);
+      io.to(id).emit("private-typing", socket.username);
     });
   });
 
@@ -68,15 +67,17 @@ io.on("connection", socket => {
   });
 
   socket.on("disconnect", ()=>{
-    const u = socket.userId;
+    const u = socket.username;
     if(!u || !users[u]) return;
+
     users[u].sockets.delete(socket.id);
-    if(users[u].sockets.size===0){
-      users[u].status="offline";
+    if(users[u].sockets.size === 0){
+      users[u].status = "offline";
       broadcastUsers();
     }
   });
-
 });
 
-server.listen(3000, ()=>console.log("Server running on 3000"));
+server.listen(process.env.PORT || 3000, () =>
+  console.log("Server running")
+);

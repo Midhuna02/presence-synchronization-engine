@@ -6,137 +6,138 @@
   <script src="/socket.io/socket.io.js"></script>
 
   <style>
-    *{box-sizing:border-box}
-    body{
-      margin:0;
-      font-family:Arial;
-      height:100vh;
-      display:flex;
-      background:#e5ddd5;
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: Arial;
+      height: 100dvh; /* dynamic viewport */
+      display: flex;
+      background: #e5ddd5;
+      overflow: hidden;
     }
 
-    .users{
-      width:260px;
-      background:#fff;
-      border-right:1px solid #ddd;
-      padding:10px;
-      overflow-y:auto;
+    .users {
+      width: 260px;
+      background: #fff;
+      border-right: 1px solid #ddd;
+      padding: 10px;
+      overflow-y: auto;
     }
 
-    .user,.group{
-      padding:10px;
-      border-bottom:1px solid #eee;
-      cursor:pointer;
+    .user, .group {
+      padding: 10px;
+      border-bottom: 1px solid #eee;
+      cursor: pointer;
     }
 
-    .group{
-      font-weight:bold;
-      background:#f0f0f0;
+    .group { font-weight: bold; background: #f0f0f0; }
+    .online { color: green; }
+    .offline { color: gray; }
+
+    .chat {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      background: #efeae2;
+      position: relative;
     }
 
-    .online{color:green}
-    .offline{color:gray}
-
-    .chat{
-      flex:1;
-      display:flex;
-      flex-direction:column;
-      background:#efeae2;
+    .header {
+      padding: 12px;
+      background: #075e54;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-shrink: 0;
     }
 
-    .header{
-      padding:12px;
-      background:#075e54;
-      color:#fff;
-      display:flex;
-      align-items:center;
-      gap:10px;
+    #backBtn {
+      display: none;
+      cursor: pointer;
+      font-size: 18px;
     }
 
-    #backBtn{
-      display:none;
-      cursor:pointer;
-      font-size:18px;
+    .typing {
+      font-size: 12px;
+      padding: 4px 12px;
+      height: 18px;
+      flex-shrink: 0;
     }
 
-    .typing{
-      font-size:12px;
-      padding:4px 12px;
-      height:18px;
+    .messages {
+      flex: 1;
+      padding: 12px;
+      overflow-y: auto;
+      padding-bottom: 80px; /* space for input */
     }
 
-    .messages{
-      flex:1;
-      padding:12px;
-      overflow-y:auto;
+    .msg {
+      max-width: 70%;
+      margin-bottom: 8px;
+      padding: 8px 10px;
+      border-radius: 8px;
+      font-size: 14px;
     }
 
-    .msg{
-      max-width:70%;
-      margin-bottom:8px;
-      padding:8px 10px;
-      border-radius:8px;
-      font-size:14px;
+    .me { background: #dcf8c6; margin-left: auto; }
+    .them { background: #fff; }
+
+    .meta {
+      font-size: 11px;
+      opacity: .6;
+      text-align: right;
     }
 
-    .me{
-      background:#dcf8c6;
-      margin-left:auto;
+    /* INPUT FIX */
+    .input {
+      position: fixed;
+      bottom: env(safe-area-inset-bottom);
+      left: 0;
+      right: 0;
+      display: flex;
+      padding: 10px;
+      background: #f0f0f0;
+      gap: 8px;
+      z-index: 100;
     }
 
-    .them{
-      background:#fff;
+    .input input {
+      flex: 1;
+      padding: 12px;
+      border-radius: 20px;
+      border: 1px solid #ccc;
+      font-size: 15px;
     }
 
-    .meta{
-      font-size:11px;
-      opacity:.6;
-      text-align:right;
+    .input button {
+      padding: 12px 18px;
+      background: #075e54;
+      color: #fff;
+      border: none;
+      border-radius: 20px;
+      font-size: 14px;
     }
 
-    .input{
-      display:flex;
-      padding:10px;
-      background:#f0f0f0;
-    }
+    /* MOBILE NAV */
+    @media (max-width: 768px) {
+      body { flex-direction: column; }
 
-    input{
-      flex:1;
-      padding:10px;
-      border-radius:20px;
-      border:1px solid #ccc;
-      font-size:14px;
-    }
-
-    button{
-      margin-left:8px;
-      padding:10px 16px;
-      background:#075e54;
-      color:#fff;
-      border:none;
-      border-radius:20px;
-      font-size:14px;
-    }
-
-    /* ---------- MOBILE ---------- */
-    @media(max-width:768px){
-      body{flex-direction:column}
-
-      .users{
-        width:100%;
-        height:100vh;
-        display:block;
+      .users {
+        width: 100%;
+        height: 100dvh;
       }
 
-      .chat{
-        display:none;
-        height:100vh;
+      .chat {
+        display: none;
+        height: 100dvh;
       }
 
-      body.chat-open .users{display:none}
-      body.chat-open .chat{display:flex}
+      body.chat-open .users { display: none; }
+      body.chat-open .chat { display: flex; }
 
-      #backBtn{display:inline}
+      #backBtn { display: inline; }
     }
   </style>
 </head>
@@ -159,7 +160,7 @@
   <div class="messages" id="messages"></div>
 
   <div class="input">
-    <input id="msg" placeholder="Type a message...">
+    <input id="msg" placeholder="Type a message..." />
     <button onclick="send()">Send</button>
   </div>
 </div>
@@ -180,8 +181,8 @@ socket.emit("join", me);
 socket.on("user-list", users => {
   const ul = document.getElementById("userList");
   ul.innerHTML = "";
-  for(const u in users){
-    if(u === me) continue;
+  for (const u in users) {
+    if (u === me) continue;
     const div = document.createElement("div");
     div.className = "user " + users[u];
     div.innerText = `${u} (${users[u]})`;
@@ -190,112 +191,108 @@ socket.on("user-list", users => {
   }
 });
 
-/* CHAT SELECT */
-function selectGroup(){
-  mode="group";
-  selectedUser=null;
-  document.getElementById("chatTitle").innerText="Group Chat";
+/* SELECT CHAT */
+function selectGroup() {
+  mode = "group";
+  selectedUser = null;
+  document.getElementById("chatTitle").innerText = "Group Chat";
   document.body.classList.add("chat-open");
-  messagesDiv().innerHTML="";
+  messagesDiv().innerHTML = "";
   messages.group.forEach(renderMessage);
 }
 
-function selectUser(user){
-  mode="private";
-  selectedUser=user;
-  document.getElementById("chatTitle").innerText=user;
+function selectUser(user) {
+  mode = "private";
+  selectedUser = user;
+  document.getElementById("chatTitle").innerText = user;
   document.body.classList.add("chat-open");
-  messagesDiv().innerHTML="";
-  messages[user]=messages[user]||[];
+  messagesDiv().innerHTML = "";
+  messages[user] = messages[user] || [];
   messages[user].forEach(renderMessage);
 }
 
-function goBack(){
+function goBack() {
   document.body.classList.remove("chat-open");
 }
 
 /* SEND */
-function send(){
+function send() {
   const text = msgInput.value.trim();
-  if(!text) return;
+  if (!text) return;
 
-  const message={
-    from:me,
+  const message = {
+    from: me,
     text,
-    time:new Date().toLocaleTimeString(),
-    msgId:Date.now()+me,
-    status:"sent"
+    time: new Date().toLocaleTimeString(),
+    msgId: Date.now() + me,
+    status: "sent"
   };
 
-  if(mode==="group"){
+  if (mode === "group") {
     messages.group.push(message);
     renderMessage(message);
     socket.emit("group-message", message);
-  }else{
+  } else {
     messages[selectedUser].push(message);
     renderMessage(message);
-    socket.emit("private-message",{to:selectedUser,message});
+    socket.emit("private-message", { to: selectedUser, message });
   }
-  msgInput.value="";
+
+  msgInput.value = "";
 }
 
 /* RECEIVE */
-socket.on("group-message", m=>{
+socket.on("group-message", m => {
   messages.group.push(m);
-  if(mode==="group") renderMessage(m);
+  if (mode === "group") renderMessage(m);
 });
 
-socket.on("private-message", m=>{
-  m.status="delivered";
-  messages[m.from]=messages[m.from]||[];
+socket.on("private-message", m => {
+  m.status = "delivered";
+  messages[m.from] = messages[m.from] || [];
   messages[m.from].push(m);
-  if(mode==="private" && selectedUser===m.from){
+  if (mode === "private" && selectedUser === m.from) {
     renderMessage(m);
-    socket.emit("seen",{to:m.from,msgId:m.msgId});
-    m.status="seen";
-  }
-});
-
-socket.on("seen", msgId=>{
-  for(const u in messages){
-    messages[u]?.forEach(m=>{
-      if(m.msgId===msgId) m.status="seen";
-    });
+    socket.emit("seen", { to: m.from, msgId: m.msgId });
+    m.status = "seen";
   }
 });
 
 /* TYPING */
-msgInput.addEventListener("input",()=>{
-  if(mode==="group") socket.emit("group-typing");
-  if(mode==="private") socket.emit("private-typing",{to:selectedUser});
-});
+msgInput.addEventListener("input", emitTyping);
+msgInput.addEventListener("keydown", emitTyping);
 
-socket.on("group-typing", user=>showTyping(user));
-socket.on("private-typing", user=>showTyping(user));
+function emitTyping() {
+  if (!document.body.classList.contains("chat-open")) return;
+  if (mode === "group") socket.emit("group-typing");
+  if (mode === "private" && selectedUser)
+    socket.emit("private-typing", { to: selectedUser });
+}
 
-function showTyping(user){
-  typingDiv.innerText=`${user} is typing...`;
+socket.on("group-typing", showTyping);
+socket.on("private-typing", showTyping);
+
+function showTyping(user) {
+  typingDiv.innerText = `${user} is typing...`;
   clearTimeout(typingTimer);
-  typingTimer=setTimeout(()=>typingDiv.innerText="",1200);
+  typingTimer = setTimeout(() => typingDiv.innerText = "", 1200);
 }
 
 /* HELPERS */
-function renderMessage(m){
-  const div=document.createElement("div");
-  div.className=`msg ${m.from===me?"me":"them"}`;
-  div.innerHTML=`
+function renderMessage(m) {
+  const div = document.createElement("div");
+  div.className = `msg ${m.from === me ? "me" : "them"}`;
+  div.innerHTML = `
     ${m.text}
-    <div class="meta">${m.time} ${m.from===me && mode==="private" ? "• "+m.status : ""}</div>
+    <div class="meta">${m.time}</div>
   `;
   messagesDiv().appendChild(div);
-  messagesDiv().scrollTop=messagesDiv().scrollHeight;
+  messagesDiv().scrollTop = messagesDiv().scrollHeight;
 }
 
-function messagesDiv(){
+function messagesDiv() {
   return document.getElementById("messages");
 }
-
-msgInput.addEventListener("keydown",e=>e.key==="Enter" && send());
 </script>
 
 </body>
