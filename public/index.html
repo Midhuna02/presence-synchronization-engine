@@ -2,25 +2,142 @@
 <html>
 <head>
   <title>Mi Chat</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <script src="/socket.io/socket.io.js"></script>
 
   <style>
-    body { margin:0; font-family:Arial; height:100vh; display:flex; background:#e5ddd5 }
-    .users { width:260px; background:#fff; border-right:1px solid #ddd; padding:10px }
-    .user,.group { padding:8px; border-bottom:1px solid #eee; cursor:pointer }
-    .group { font-weight:bold; background:#f0f0f0 }
-    .online{color:green} .offline{color:gray}
-    .chat{flex:1; display:flex; flex-direction:column}
-    .header{padding:12px; background:#075e54; color:#fff}
-    .typing{font-size:12px; padding:4px 12px; height:16px}
-    .messages{flex:1; padding:12px; overflow-y:auto; background:#efeae2}
-    .msg{max-width:70%; margin-bottom:8px; padding:8px 10px; border-radius:8px}
-    .me{background:#dcf8c6; margin-left:auto}
-    .them{background:#fff}
-    .meta{font-size:11px; opacity:.6; text-align:right}
-    .input{display:flex; padding:10px; background:#f0f0f0}
-    input{flex:1; padding:8px; border-radius:20px; border:1px solid #ccc}
-    button{margin-left:8px; padding:8px 14px; background:#075e54; color:#fff; border:none; border-radius:20px}
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family:Arial;
+      height:100vh;
+      display:flex;
+      background:#e5ddd5;
+    }
+
+    .users{
+      width:260px;
+      background:#fff;
+      border-right:1px solid #ddd;
+      padding:10px;
+      overflow-y:auto;
+    }
+
+    .user,.group{
+      padding:10px;
+      border-bottom:1px solid #eee;
+      cursor:pointer;
+    }
+
+    .group{
+      font-weight:bold;
+      background:#f0f0f0;
+    }
+
+    .online{color:green}
+    .offline{color:gray}
+
+    .chat{
+      flex:1;
+      display:flex;
+      flex-direction:column;
+      background:#efeae2;
+    }
+
+    .header{
+      padding:12px;
+      background:#075e54;
+      color:#fff;
+      display:flex;
+      align-items:center;
+      gap:10px;
+    }
+
+    #backBtn{
+      display:none;
+      cursor:pointer;
+      font-size:18px;
+    }
+
+    .typing{
+      font-size:12px;
+      padding:4px 12px;
+      height:18px;
+    }
+
+    .messages{
+      flex:1;
+      padding:12px;
+      overflow-y:auto;
+    }
+
+    .msg{
+      max-width:70%;
+      margin-bottom:8px;
+      padding:8px 10px;
+      border-radius:8px;
+      font-size:14px;
+    }
+
+    .me{
+      background:#dcf8c6;
+      margin-left:auto;
+    }
+
+    .them{
+      background:#fff;
+    }
+
+    .meta{
+      font-size:11px;
+      opacity:.6;
+      text-align:right;
+    }
+
+    .input{
+      display:flex;
+      padding:10px;
+      background:#f0f0f0;
+    }
+
+    input{
+      flex:1;
+      padding:10px;
+      border-radius:20px;
+      border:1px solid #ccc;
+      font-size:14px;
+    }
+
+    button{
+      margin-left:8px;
+      padding:10px 16px;
+      background:#075e54;
+      color:#fff;
+      border:none;
+      border-radius:20px;
+      font-size:14px;
+    }
+
+    /* ---------- MOBILE ---------- */
+    @media(max-width:768px){
+      body{flex-direction:column}
+
+      .users{
+        width:100%;
+        height:100vh;
+        display:block;
+      }
+
+      .chat{
+        display:none;
+        height:100vh;
+      }
+
+      body.chat-open .users{display:none}
+      body.chat-open .chat{display:flex}
+
+      #backBtn{display:inline}
+    }
   </style>
 </head>
 
@@ -33,19 +150,23 @@
 </div>
 
 <div class="chat">
-  <div class="header" id="chatHeader">Group Chat</div>
+  <div class="header">
+    <span id="backBtn" onclick="goBack()">←</span>
+    <span id="chatTitle">Group Chat</span>
+  </div>
+
   <div class="typing" id="typing"></div>
   <div class="messages" id="messages"></div>
 
   <div class="input">
-    <input id="msg" placeholder="Type a message..." />
+    <input id="msg" placeholder="Type a message...">
     <button onclick="send()">Send</button>
   </div>
 </div>
 
 <script>
 const socket = io();
-const me = prompt("Your name");
+const me = prompt("Enter your name");
 let mode = "group";
 let selectedUser = null;
 const messages = { group: [] };
@@ -55,215 +176,127 @@ let typingTimer;
 
 socket.emit("join", me);
 
-/* ---------- USER LIST ---------- */
-socket.on("user-list", (users) => {
+/* USER LIST */
+socket.on("user-list", users => {
   const ul = document.getElementById("userList");
   ul.innerHTML = "";
-  for (const u in users) {
-    if (u === me) continue;
+  for(const u in users){
+    if(u === me) continue;
     const div = document.createElement("div");
-    div.className = `user ${users[u]}`;
+    div.className = "user " + users[u];
     div.innerText = `${u} (${users[u]})`;
     div.onclick = () => selectUser(u);
     ul.appendChild(div);
   }
 });
 
-/* ---------- CHAT SELECT ---------- */
-function selectGroup() {
-  mode = "group";
-  selectedUser = null;
-  chatHeader.innerText = "Group Chat";
-  messagesDiv().innerHTML = "";
-  typingDiv.innerText = "";
+/* CHAT SELECT */
+function selectGroup(){
+  mode="group";
+  selectedUser=null;
+  document.getElementById("chatTitle").innerText="Group Chat";
+  document.body.classList.add("chat-open");
+  messagesDiv().innerHTML="";
   messages.group.forEach(renderMessage);
 }
 
-function selectUser(user) {
-  mode = "private";
-  selectedUser = user;
-  chatHeader.innerText = user;
-  messagesDiv().innerHTML = "";
-  typingDiv.innerText = "";
-
-  messages[user] = messages[user] || [];
+function selectUser(user){
+  mode="private";
+  selectedUser=user;
+  document.getElementById("chatTitle").innerText=user;
+  document.body.classList.add("chat-open");
+  messagesDiv().innerHTML="";
+  messages[user]=messages[user]||[];
   messages[user].forEach(renderMessage);
-
-  messages[user].forEach(m => {
-    if (m.from !== me && m.status !== "seen") {
-      socket.emit("seen", { to: user, msgId: m.msgId });
-      m.status = "seen";
-    }
-  });
 }
 
-/* ---------- SEND ---------- */
-function send() {
-  const text = msgInput.value.trim();
-  if (!text) return;
+function goBack(){
+  document.body.classList.remove("chat-open");
+}
 
-  const message = {
-    from: me,
+/* SEND */
+function send(){
+  const text = msgInput.value.trim();
+  if(!text) return;
+
+  const message={
+    from:me,
     text,
-    time: new Date().toLocaleTimeString(),
-    msgId: Date.now() + me,
-    status: "sent"
+    time:new Date().toLocaleTimeString(),
+    msgId:Date.now()+me,
+    status:"sent"
   };
 
-  if (mode === "group") {
+  if(mode==="group"){
     messages.group.push(message);
     renderMessage(message);
     socket.emit("group-message", message);
-  } else {
+  }else{
     messages[selectedUser].push(message);
     renderMessage(message);
-    socket.emit("private-message", { to: selectedUser, message });
+    socket.emit("private-message",{to:selectedUser,message});
   }
-
-  msgInput.value = "";
+  msgInput.value="";
 }
 
-/* ---------- RECEIVE ---------- */
-socket.on("group-message", (message) => {
-  messages.group.push(message);
-  if (mode === "group") renderMessage(message);
+/* RECEIVE */
+socket.on("group-message", m=>{
+  messages.group.push(m);
+  if(mode==="group") renderMessage(m);
 });
 
-socket.on("private-message", (message) => {
-  message.status = "delivered";
-  messages[message.from] = messages[message.from] || [];
-  messages[message.from].push(message);
-
-  if (mode === "private" && selectedUser === message.from) {
-    renderMessage(message);
-    socket.emit("seen", { to: message.from, msgId: message.msgId });
-    message.status = "seen";
+socket.on("private-message", m=>{
+  m.status="delivered";
+  messages[m.from]=messages[m.from]||[];
+  messages[m.from].push(m);
+  if(mode==="private" && selectedUser===m.from){
+    renderMessage(m);
+    socket.emit("seen",{to:m.from,msgId:m.msgId});
+    m.status="seen";
   }
 });
 
-socket.on("seen", (msgId) => {
-  for (const u in messages) {
-    messages[u]?.forEach(m => {
-      if (m.msgId === msgId) m.status = "seen";
+socket.on("seen", msgId=>{
+  for(const u in messages){
+    messages[u]?.forEach(m=>{
+      if(m.msgId===msgId) m.status="seen";
     });
   }
-  refreshChat();
 });
 
-/* ---------- TYPING ---------- */
-msgInput.addEventListener("input", () => {
-  if (mode === "group") socket.emit("group-typing");
-  if (mode === "private") socket.emit("private-typing", { to: selectedUser });
+/* TYPING */
+msgInput.addEventListener("input",()=>{
+  if(mode==="group") socket.emit("group-typing");
+  if(mode==="private") socket.emit("private-typing",{to:selectedUser});
 });
 
-socket.on("group-typing", showTyping);
-socket.on("private-typing", showTyping);
+socket.on("group-typing", user=>showTyping(user));
+socket.on("private-typing", user=>showTyping(user));
 
-function showTyping(user) {
-  typingDiv.innerText = `${user} is typing...`;
+function showTyping(user){
+  typingDiv.innerText=`${user} is typing...`;
   clearTimeout(typingTimer);
-  typingTimer = setTimeout(() => typingDiv.innerText = "", 1200);
+  typingTimer=setTimeout(()=>typingDiv.innerText="",1200);
 }
 
-/* ---------- HELPERS ---------- */
-function renderMessage(m) {
-  const div = document.createElement("div");
-  div.className = `msg ${m.from === me ? "me" : "them"}`;
-  div.innerHTML = `
+/* HELPERS */
+function renderMessage(m){
+  const div=document.createElement("div");
+  div.className=`msg ${m.from===me?"me":"them"}`;
+  div.innerHTML=`
     ${m.text}
-    <div class="meta">
-      ${m.time}
-      ${m.from === me && mode === "private" ? " • " + m.status : ""}
-    </div>
+    <div class="meta">${m.time} ${m.from===me && mode==="private" ? "• "+m.status : ""}</div>
   `;
   messagesDiv().appendChild(div);
-  messagesDiv().scrollTop = messagesDiv().scrollHeight;
+  messagesDiv().scrollTop=messagesDiv().scrollHeight;
 }
 
-function refreshChat() {
-  if (mode !== "private") return;
-  messagesDiv().innerHTML = "";
-  messages[selectedUser].forEach(renderMessage);
-}
-
-function messagesDiv() {
+function messagesDiv(){
   return document.getElementById("messages");
 }
 
-msgInput.addEventListener("keydown", e => e.key === "Enter" && send());
+msgInput.addEventListener("keydown",e=>e.key==="Enter" && send());
 </script>
 
 </body>
 </html>
-
-/* =========================
-   MOBILE VIEW (phones)
-   ========================= */
-@media (max-width: 768px) {
-
-  body {
-    flex-direction: column;
-  }
-
-  /* User list becomes horizontal top bar */
-  .users {
-    width: 100%;
-    height: auto;
-    display: flex;
-    flex-direction: row;
-    overflow-x: auto;
-    border-right: none;
-    border-bottom: 1px solid #ddd;
-  }
-
-  .group,
-  .user {
-    flex: 0 0 auto;
-    padding: 10px;
-    font-size: 13px;
-    white-space: nowrap;
-  }
-
-  hr {
-    display: none;
-  }
-
-  /* Chat area full screen */
-  .chat {
-    flex: 1;
-    height: 100%;
-  }
-
-  .header {
-    font-size: 16px;
-    text-align: center;
-  }
-
-  .messages {
-    padding: 8px;
-  }
-
-  .msg {
-    max-width: 85%;
-    font-size: 13px;
-  }
-
-  /* Input area */
-  .input {
-    padding: 8px;
-  }
-
-  .input input {
-    font-size: 14px;
-    padding: 10px;
-  }
-
-  .input button {
-    padding: 10px 16px;
-    font-size: 14px;
-  }
-
-  .typing {
-    font-size: 11px;
-  }
-}
